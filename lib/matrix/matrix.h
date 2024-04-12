@@ -1783,6 +1783,27 @@ bool hasZeroPivotColumn(const Matrix<T>& echelonMatrix) {
 //   }
 //   return true;
 // }
+
+template <typename T>
+SolutionType findSolutionType(const Matrix<T>& echelonMatrix, size_t numUnknowns) {
+    size_t rank = echelonMatrix.Rank();
+    if (rank == echelonMatrix.nCols() - 1) {
+        return SolutionType::EXACT_SOLUTION_XP;
+    } else {
+        bool noSolution = true;
+        for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
+            if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
+                noSolution = false;
+                break;
+            }
+        }
+        if (noSolution) {
+            return SolutionType::NO_SOLUTION;
+        } else {
+            return SolutionType::INFINITE_SOLUTIONS_XP_XS;
+        }
+    }
+}
 template <typename T>
 void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
                              std::vector<size_t>& pivotColumns,
@@ -1890,26 +1911,7 @@ std::string LinearCombination(const std::vector<std::string>& xsExpressions) {
   }
   return linearComb;
 }
-template <typename T>
-SolutionType findSolutionType(const Matrix<T>& echelonMatrix, size_t numUnknowns) {
-    size_t rank = echelonMatrix.Rank();
-    if (rank == echelonMatrix.nCols() - 1) {
-        return SolutionType::EXACT_SOLUTION_XP;
-    } else {
-        bool noSolution = true;
-        for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
-            if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
-                noSolution = false;
-                break;
-            }
-        }
-        if (noSolution) {
-            return SolutionType::NO_SOLUTION;
-        } else {
-            return SolutionType::INFINITE_SOLUTIONS_XP_XS;
-        }
-    }
-}
+
 
 template <typename T>
 Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
