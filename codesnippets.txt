@@ -1,0 +1,258 @@
+// template <typename T>
+// std::istream& operator>>(std::istream& s, Matrix<T>& matrix) {
+//   for (size_t i = 0; i < matrix.mRows; ++i) {
+//     for (size_t j = 0; j < matrix.mCols; ++j) {
+//       s >> matrix.mData[i * matrix.mCols + j];
+//     }
+//   }
+//   return s;
+// }
+
+// template <typename T>
+// std::ostream& operator<<(std::ostream& s, const Matrix<T>& matrix) {
+//   for (size_t i = 0; i < matrix.mRows; ++i) {
+//     for (size_t j = 0; j < matrix.mCols; ++j) {
+//       s << matrix.mData[i * matrix.mCols + j] << " ";
+//     }
+//     s << std::endl;
+//   }
+//   return s;
+// }
+
+// template <typename T>
+// int print(const Matrix<T>& matrix) {
+//   for (size_t i = 0; i < matrix.mRows; ++i) {
+//     for (size_t j = 0; j < matrix.mCols; ++j) {
+//       std::cout << matrix(i, j) << " " << std::endl;
+//     }
+//   }
+// }
+
+//}  // namespace MAT
+
+// template <class T>
+// Matrix<T> EswapRow(const Matrix<T>& mat, size_t r0, size_t r1) {
+//   if (std::max(r0, r1) >= mat.nRows()) {
+//     std::cout << "row index exceeds matrix size";
+//     std::exit(-1);
+//   }
+
+//   Matrix<T> swapOp(mat.nRows(), mat.nRows());
+//   swapOp.identity();
+
+//   Matrix<T> zeroRow(1, mat.nRows());
+//   zeroRow.fill(0);
+
+//   // r0
+//   swapOp.setRow(r0, zeroRow);
+//   swapOp(r0, r1) = 1;
+
+//   // r1
+//   swapOp.setRow(r1, zeroRow);
+//   swapOp(r1, r0) = 1;
+
+//   return swapOp;
+// }
+
+// template <class T>
+// Matrix<T> EmultiplyRow(const Matrix<T>& mat, T factor, size_t r) {
+//   if (r >= mat.nRows()) {
+//     std::cout << "row index exceeds matrix size";
+//     std::exit(-1);
+//   }
+
+//   Matrix<T> mulOp(mat.nRows(), mat.nRows());
+//   mulOp.identity();
+//   mulOp(r, r) = factor;
+
+//   return mulOp;
+// }
+
+// template <class T>
+// Matrix<T> EaddProductOfRow(const Matrix<T>& mat, T factor, size_t r0,
+//                            size_t r1) {
+//   if (std::max(r0, r1) >= mat.nRows()) {
+//     std::cout << "row index exceeds matrix size";
+//     std::exit(-1);
+//   }
+
+//   Matrix<T> addProdOp(mat.nRows(), mat.nRows());
+//   addProdOp.identity();
+//   addProdOp(r1, r0) = factor;
+
+//   return addProdOp;
+// }
+
+// template <class T>
+// Matrix<double> echelon(const Matrix<T>& mat,
+//                        std::vector<Matrix<double>>& rowOperations,
+
+//                        bool fullPivoting) {
+
+//   ;
+//   Matrix<double> ret(mat);
+
+//   size_t processingRow = 0;
+//   for (size_t n = 0; n < ret.nCols(); n++) {
+//     // Choose pivot row - here the abs-max value is chosen.
+//     // Find abs-max entry in col n from row processingRow on
+//     size_t pivotRow = 0;
+//     double maxValue = std::numeric_limits<double>::min();
+//     bool foundNonZeroPivot = false;
+//     for (size_t m = processingRow; m < ret.nRows(); m++) {
+//       double currentValue = std::abs(ret(m, n));
+
+//       if (currentValue > maxValue) {
+//         pivotRow = m;
+//         foundNonZeroPivot = true;
+//         maxValue = currentValue;
+
+//         // Possible non-zero pivot found. If fullPivoting is
+//         // disabled, pivot search can be stopped.
+//         if (!fullPivoting)
+//           break;
+//       }
+//     }
+
+//     if (foundNonZeroPivot) {
+//       // if the found pivot row is not equal the current processing row,
+//       // swap these two row.
+//       if (pivotRow > processingRow) {
+//         ret.swapRows(processingRow, pivotRow);  // move pivot up
+
+//         rowOperations.push_back(EswapRow(ret, processingRow, pivotRow));
+//       }
+
+//       // adapt pivot line
+//       double pivotElement = ret(processingRow, n);
+//       auto pivotRow = ret.getRow(processingRow);
+//       auto scaledPivotRow = pivotRow * (1 / pivotElement);
+//       ret.setRow(processingRow, scaledPivotRow);
+//       rowOperations.push_back(
+//           EmultiplyRow(ret, 1.0 / pivotElement, processingRow));
+
+//       double scaledPivotElement =
+//           ret(processingRow, n);  // should be always 1.0
+
+//       // add scaled pivot line to below rows so that elements in column n become zero
+//       for (size_t q = processingRow + 1; q < ret.nRows(); q++) {
+//         double localPivotElement = ret(q, n);
+//         double localPivotFactor = localPivotElement / scaledPivotElement * (-1);
+//         auto newLocalRow = (scaledPivotRow * localPivotFactor) + ret.getRow(q);
+//         ret.setRow(q, newLocalRow);
+//         rowOperations.push_back(
+//             EaddProductOfRow(ret, localPivotFactor, processingRow, q));
+//       }
+
+//       processingRow++;
+//     }
+//   }
+
+//   return ret;
+// }
+
+// template <typename T>
+// Matrix<T> echelon2(const Matrix<T>& input) {
+//   Matrix<T> result(input);  // Create a copy of the current matrix
+//   size_t processingRow = 0;
+
+//   // Find the row with the largest first element and swap it to the top
+//   size_t largestRow = 0;
+//   for (size_t i = 1; i < result.nRows(); ++i) {
+//     if (result(i, 0) > result(largestRow, 0)) {
+//       largestRow = i;
+//     }
+//   }
+//   result.swapRows(0, largestRow);
+
+//   for (size_t n = 0; n < result.nCols(); ++n) {
+//     // Check for zero column
+//     bool zeroColumn = true;
+//     for (size_t m = processingRow; m < result.nRows(); ++m) {
+//       if (result(m, n) != 0) {
+//         zeroColumn = false;
+//         break;
+//       }
+//     }
+//     if (zeroColumn) {
+//       continue;  // Skip zero column
+//     }
+
+//     size_t pivotRow = processingRow;
+//     T pivotElement = result(processingRow, n);
+
+//     // Scale the pivot row to make the pivot element 1
+//     for (size_t i = n; i < result.nCols(); ++i) {
+//       result(processingRow, i) /= pivotElement;
+//     }
+
+//     // Perform row operations to eliminate entries below the pivot
+//     for (size_t q = processingRow + 1; q < result.nRows(); ++q) {
+//       T localPivotElement = result(q, n);
+//       for (size_t i = n; i < result.nCols(); ++i) {
+//         result(q, i) -= result(processingRow, i) * localPivotElement;
+//       }
+//     }
+
+//     processingRow++;
+//   }
+
+//   return result;
+// }
+
+// template <typename T>
+// Matrix<T> echelon3(const Matrix<T>& input) {
+//   Matrix<T> result(input);  // Create a copy of the current matrix
+//   size_t processingRow = 0;
+
+//   for (size_t n = 0; n < result.nCols(); ++n) {
+//     // Check if any entry of the pivot column is zero
+//     bool pivotColumnZero = true;
+//     for (size_t m = processingRow; m < result.nRows(); ++m) {
+//       if (result(m, n) != 0) {
+//         pivotColumnZero = false;
+//         break;
+//       }
+//     }
+
+//     if (pivotColumnZero) {
+//       continue;  // Skip if pivot column has no nonzero entries
+//     }
+
+//     // Proceed with echelonization process for nonzero pivot column
+//     size_t pivotRow = processingRow;
+//     T pivotElement = result(processingRow, n);
+
+//     if (pivotElement == 0) {
+//       // If pivot element is zero, find a nonzero pivot below
+//       size_t newPivotRow = processingRow + 1;
+//       while (newPivotRow < result.nRows() && result(newPivotRow, n) == 0) {
+//         ++newPivotRow;
+//       }
+//       if (newPivotRow == result.nRows()) {
+//         continue;  // No nonzero pivot found, move to the next column
+//       }
+//       result.swapRows(processingRow, newPivotRow);
+//       pivotElement = result(processingRow, n);
+//     }
+
+//     // Scale the pivot row to make the pivot element 1
+//     for (size_t i = n; i < result.nCols(); ++i) {
+//       if (result(processingRow, i) != 0) {
+//         result(processingRow, i) /= pivotElement;
+//       }
+//     }
+
+//     // Perform row operations to eliminate entries below the pivot
+//     for (size_t q = processingRow + 1; q < result.nRows(); ++q) {
+//       T localPivotElement = result(q, n);
+//       for (size_t i = n; i < result.nCols(); ++i) {
+//         result(q, i) -= result(processingRow, i) * localPivotElement;
+//       }
+//     }
+
+//     processingRow++;
+//   }
+
+//   return result;
+// }
