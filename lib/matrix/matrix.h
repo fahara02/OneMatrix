@@ -2242,10 +2242,62 @@ std::string LinearCombination(const std::vector<std::string>& xsExpressions) {
   }
   return linearComb;
 }
+template <typename T>
+SolutionType findSolutionType(const Matrix<T>& echelonMatrix, size_t numUnknowns) {
+    size_t rank = echelonMatrix.Rank();
+    if (rank == echelonMatrix.nCols() - 1) {
+        return SolutionType::EXACT_SOLUTION_XP;
+    } else {
+        bool noSolution = true;
+        for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
+            if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
+                noSolution = false;
+                break;
+            }
+        }
+        if (noSolution) {
+            return SolutionType::NO_SOLUTION;
+        } else {
+            return SolutionType::INFINITE_SOLUTIONS_XP_XS;
+        }
+    }
+}
+
+template <typename T>
+Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
+    Matrix<T> augmented = A.augmentedMatrix(b);
+
+    std::cout << "Row echelon form of augmented matrix:" << std::endl;
+    Matrix<T> echelonMatrix = augmented.rowEchelon();
+    print_matrix(echelonMatrix);  // Assuming print_matrix is defined
+
+    size_t numUnknowns = echelonMatrix.nCols() - 1;
+    SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
+
+    switch (solutionType) {
+        case SolutionType::EXACT_SOLUTION_XP: {
+            std::vector<T> xp = backSubstitution(echelonMatrix);
+            return {solutionType, xp, ""};
+        }
+        case SolutionType::NO_SOLUTION:
+            return {solutionType, {}, "No solution exists."};
+        case SolutionType::INFINITE_SOLUTIONS_XP_XS: {
+            Matrix<T> rrefMatrix = augmented.rref();
+            std::vector<size_t> pivotColumns;
+            std::vector<size_t> freeColumns;
+            findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
+            std::vector<T> xp(numUnknowns, 0);
+            calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
+            std::vector<std::string> xsExpressions = calculateXS(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
+            std::string linearComb = LinearCombination(xsExpressions);
+            return {solutionType, xp, linearComb};
+        }
+    }
+}
 
 // Your solver_AX_b function
 template <typename T>
-Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
+Solution<T> solver_AX_b66(const Matrix<T>& A, const std::vector<T>& b) {
   Matrix<T> augmented = A.augmentedMatrix(b);
 
   // Print row echelon form of augmented matrix for debugging exact solutions
