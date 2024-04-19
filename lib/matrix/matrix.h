@@ -1738,27 +1738,6 @@ std::vector<T> backSubstitution(const Matrix<T>& echelonMatrix) {
   return solution;
 }
 
-// template <typename T>
-// SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
-//                               size_t numUnknowns) {
-//   size_t rank = echelonMatrix.Rank();
-//   if (rank == echelonMatrix.nCols() - 1) {
-//     return SolutionType::EXACT_SOLUTION_XP;
-//   } else {
-//     bool noSolution = true;
-//     for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
-//       if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
-//         noSolution = false;
-//         break;
-//       }
-//     }
-//     if (noSolution) {
-//       return SolutionType::NO_SOLUTION;
-//     } else {
-//       return SolutionType::INFINITE_SOLUTIONS_XP_XS;
-//     }
-//   }
-// }
 template <typename T>
 SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
                               size_t numUnknowns) {
@@ -1775,44 +1754,77 @@ SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
     return SolutionType::NO_SOLUTION;
   }
 }
+// template <typename T>
+// void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
+//                              std::vector<size_t>& pivotColumns,
+//                              std::vector<size_t>& freeColumns) {
+//   size_t numRows = rrefMatrix.nRows();
+//   size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
+
+//   for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
+//     bool foundPivot = false;
+//     for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+//       if (rrefMatrix(rowIdx, colIdx) != 0) {
+//         pivotColumns.push_back(colIdx);
+//         foundPivot = true;
+//         break;
+//       }
+//     }
+//     if (!foundPivot) {
+//       // If no pivot is found in this row, all columns in this row are free columns
+//       for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+//         freeColumns.push_back(colIdx);
+//       }
+//       // No need to check further rows
+//       break;
+//     }
+//   }
+
+//   // Remove pivot columns from freeColumns
+//   std::sort(pivotColumns.begin(), pivotColumns.end());
+//   std::sort(freeColumns.begin(), freeColumns.end());
+//   std::vector<size_t> intersection;
+//   std::set_intersection(pivotColumns.begin(), pivotColumns.end(),
+//                         freeColumns.begin(), freeColumns.end(),
+//                         std::back_inserter(intersection));
+//   for (auto col : intersection) {
+//     freeColumns.erase(std::remove(freeColumns.begin(), freeColumns.end(), col),
+//                       freeColumns.end());
+//   }
+// }
+
 template <typename T>
 void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
                              std::vector<size_t>& pivotColumns,
                              std::vector<size_t>& freeColumns) {
-  size_t numRows = rrefMatrix.nRows();
-  size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
+    size_t numRows = rrefMatrix.nRows();
+    size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
 
-  for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
-    bool foundPivot = false;
-    for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-      if (rrefMatrix(rowIdx, colIdx) != 0) {
-        pivotColumns.push_back(colIdx);
-        foundPivot = true;
-        break;
-      }
-    }
-    if (!foundPivot) {
-      // If no pivot is found in this row, all columns in this row are free columns
-      for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-        freeColumns.push_back(colIdx);
-      }
-      // No need to check further rows
-      break;
-    }
-  }
+    std::vector<bool> columnFound(numCols, false);
 
-  // Remove pivot columns from freeColumns
-  std::sort(pivotColumns.begin(), pivotColumns.end());
-  std::sort(freeColumns.begin(), freeColumns.end());
-  std::vector<size_t> intersection;
-  std::set_intersection(pivotColumns.begin(), pivotColumns.end(),
-                        freeColumns.begin(), freeColumns.end(),
-                        std::back_inserter(intersection));
-  for (auto col : intersection) {
-    freeColumns.erase(std::remove(freeColumns.begin(), freeColumns.end(), col),
-                      freeColumns.end());
-  }
+    for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
+        bool foundPivot = false;
+        for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+            if (rrefMatrix(rowIdx, colIdx) != 0) {
+                pivotColumns.push_back(colIdx);
+                columnFound[colIdx] = true;
+                foundPivot = true;
+                break;
+            }
+        }
+        if (!foundPivot) {
+            // If no pivot is found in this row, all columns in this row are free columns
+            for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+                if (!columnFound[colIdx]) {
+                    freeColumns.push_back(colIdx);
+                }
+            }
+            // No need to check further rows
+            break;
+        }
+    }
 }
+
 template <typename T>
 void calculateXP(const Matrix<T>& rrefMatrix,
                  const std::vector<size_t>& pivotColumns, size_t numUnknowns,
@@ -1827,90 +1839,93 @@ void calculateXP(const Matrix<T>& rrefMatrix,
     }
   }
 }
+
 template <typename T>
-std::vector<std::string> calculateXS(const Matrix<T>& rrefMatrix,
-                                     const std::vector<size_t>& pivotColumns,
-                                     const std::vector<size_t>& freeColumns,
-                                     size_t numCols) {
-  std::vector<std::string> xsExpressions;
-  size_t numXs = freeColumns.size();
+std::vector<std::vector<T>> calculateXs(const Matrix<T>& rrefMatrix,
+                                        const std::vector<size_t>& pivotColumns,
+                                        const std::vector<size_t>& freeColumns,
+                                        size_t numCols) {
+    std::vector<std::vector<T>> xsExpressions;
+    size_t numXs = freeColumns.size();
 
-  for (size_t xsIdx = 0; xsIdx < numXs; ++xsIdx) {
-    std::vector<T> xs(numCols, 0);
-    size_t freeCol = freeColumns[xsIdx];
-    xs[freeCol] = 1;
+    for (size_t xsIdx = 0; xsIdx < numXs; ++xsIdx) {
+        std::vector<T> xs(numCols, 0);
+        size_t freeCol = freeColumns[xsIdx];
+        xs[freeCol] = 1;
 
-    for (size_t i = 0; i < pivotColumns.size(); ++i) {
-      size_t pivotCol = pivotColumns[i];
-      bool foundNonZero = false;
-      T coefficient = 0;  // Initialize coefficient to 0
-      for (size_t rowIdx = 0; rowIdx < rrefMatrix.nRows(); ++rowIdx) {
-        if (rrefMatrix(rowIdx, pivotCol) != 0) {
-          if (!foundNonZero) {
-            coefficient =
-                -rrefMatrix(rowIdx, freeCol) / rrefMatrix(rowIdx, pivotCol);
-            foundNonZero = true;
-          } else {
-            coefficient *= rrefMatrix(rowIdx, pivotCol);
-            coefficient -= rrefMatrix(rowIdx, freeCol);
-          }
+        for (size_t i = 0; i < pivotColumns.size(); ++i) {
+            size_t pivotCol = pivotColumns[i];
+            T coefficient = 0;  // Initialize coefficient to 0
+            bool foundNonZero = false;
+
+            for (size_t rowIdx = 0; rowIdx < rrefMatrix.nRows(); ++rowIdx) {
+                if (rrefMatrix(rowIdx, pivotCol) != 0) {
+                    if (!foundNonZero) {
+                        coefficient = -rrefMatrix(rowIdx, freeCol) / rrefMatrix(rowIdx, pivotCol);
+                        foundNonZero = true;
+                    } else {
+                        coefficient *= rrefMatrix(rowIdx, pivotCol);
+                        coefficient -= rrefMatrix(rowIdx, freeCol);
+                    }
+                }
+            }
+
+            xs[pivotCol] = coefficient;
         }
-      }
-      xs[pivotCol] = coefficient;
+
+        xsExpressions.push_back(xs);
     }
 
-    std::ostringstream xsStream;
-    xsStream << std::fixed << std::setprecision(2);
-    xsStream << "Xs" << xsExpressions.size() + 1 << ": ";
-    for (size_t i = 0; i < numCols; ++i) {
-      xsStream << "X" << i + 1 << " = " << xs[i];
-      if (i < numCols - 1)
-        xsStream << "; ";
-    }
-    xsExpressions.push_back(xsStream.str());
-  }
-
-  return xsExpressions;
+    return xsExpressions;
 }
 
-std::string LinearCombination(const std::vector<std::string>& xsExpressions) {
-  std::string linearComb;
-  for (size_t i = 0; i < xsExpressions.size(); ++i) {
-    linearComb += "C" + std::to_string(i + 1) + " * (" + xsExpressions[i] + ")";
-    if (i < xsExpressions.size() - 1)
-      linearComb += " + ";
-  }
-  return linearComb;
+std::string printLinearCombination(const std::vector<std::vector<double>>& xsExpressions) {
+    std::ostringstream linearCombStream;
+    for (size_t i = 0; i < xsExpressions.size(); ++i) {
+        linearCombStream << "C" << i + 1 << " * (";
+        for (size_t j = 0; j < xsExpressions[i].size(); ++j) {
+            linearCombStream << "X" << j + 1 << " = " << xsExpressions[i][j];
+            if (j < xsExpressions[i].size() - 1) {
+                linearCombStream << ", ";
+            }
+        }
+        linearCombStream << ")";
+        if (i < xsExpressions.size() - 1) {
+            linearCombStream << " + ";
+        }
+    }
+    return linearCombStream.str();
 }
 
 template <typename T>
 Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
-  Matrix<T> augmented = A.augmentedMatrix(b);
-  Matrix<T> echelonMatrix = augmented.rowEchelon();
-  size_t numUnknowns = echelonMatrix.nCols() - 1;
-  SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
+    Matrix<T> augmented = A.augmentedMatrix(b);
+    Matrix<T> echelonMatrix = augmented.rowEchelon();
+    size_t numUnknowns = echelonMatrix.nCols() - 1;
+    SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
 
-  switch (solutionType) {
-    case SolutionType::EXACT_SOLUTION_XP: {
-      std::vector<T> xp = backSubstitution(echelonMatrix);
-      return {solutionType, xp, ""};
+    switch (solutionType) {
+        case SolutionType::EXACT_SOLUTION_XP: {
+            std::vector<T> xp = backSubstitution(echelonMatrix);
+            return {solutionType, xp, ""};
+        }
+        case SolutionType::NO_SOLUTION:
+            return {solutionType, {}, "No solution exists."};
+        case SolutionType::INFINITE_SOLUTIONS_XP_XS: {
+            Matrix<T> rrefMatrix = augmented.rref();
+            std::vector<size_t> pivotColumns;
+            std::vector<size_t> freeColumns;
+            findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
+            std::vector<T> xp(numUnknowns, 0);
+            calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
+            std::vector<std::vector<T>> xsVectors =
+                calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
+            std::string linearComb = printLinearCombination(xsVectors);
+            return {solutionType, xp, linearComb};
+        }
     }
-    case SolutionType::NO_SOLUTION:
-      return {solutionType, {}, "No solution exists."};
-    case SolutionType::INFINITE_SOLUTIONS_XP_XS: {
-      Matrix<T> rrefMatrix = augmented.rref();
-      std::vector<size_t> pivotColumns;
-      std::vector<size_t> freeColumns;
-      findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
-      std::vector<T> xp(numUnknowns, 0);
-      calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
-      std::vector<std::string> xsExpressions =
-          calculateXS(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
-      std::string linearComb = LinearCombination(xsExpressions);
-      return {solutionType, xp, linearComb};
-    }
-  }
 }
+
 
 #undef EPSILON
 #undef EQUAL
