@@ -1710,8 +1710,8 @@ void print_matrix(const Matrix<T>& matrix) {
 enum class SolutionType {
   EXACT_SOLUTION,         // Unique solution exists
   INFINITE_SOLUTIONS,  // Infinite solutions exist
-  NO_SOLUTION,
-  ERROR  // No solution exists
+  NO_SOLUTION
+
 };
 
 template <typename T>
@@ -1721,6 +1721,36 @@ struct Solution {
   std::vector<T> values;
   std::string linearComb;  // For infinite solutions
 };
+
+
+template <typename T>
+SolutionType findSolutionType(const Matrix<T>& rrefMatrix, size_t numUnknowns) {
+    bool hasNonZeroAZeroBColumn = false;
+    bool hasAllZeroANonZeroBColumn = false;
+
+    size_t nCols = rrefMatrix.nCols();
+    size_t bColumn = nCols -1;
+    size_t AColumns = nCols -2;
+    for (size_t i = 0; i < rrefMatrix.nRows(); ++i) {
+        if (rrefMatrix(i, AColumns) != 0 && rrefMatrix(i, bColumn ) == 0) {
+            hasNonZeroAZeroBColumn = true;
+            std::cout<<"hasNonZeroAZeroBColumn\n";
+        }
+
+        if (rrefMatrix(i, AColumns) == 0 && rrefMatrix(i, bColumn ) != 0) {
+            hasAllZeroANonZeroBColumn = true;
+            std::cout<<"hasAllZeroANonZeroBColumn \n";
+        }
+    }
+
+    if (hasNonZeroAZeroBColumn || hasAllZeroANonZeroBColumn) {
+        return SolutionType::NO_SOLUTION;
+    } else if (rrefMatrix.Rank() < numUnknowns) {
+        return SolutionType::INFINITE_SOLUTIONS;
+    } else {
+        return SolutionType::EXACT_SOLUTION;
+    }
+}
 
 // Function to perform back substitution
 template <typename T>
@@ -1738,22 +1768,6 @@ std::vector<T> backSubstitution(const Matrix<T>& echelonMatrix) {
   return solution;
 }
 
-template <typename T>
-SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
-                              size_t numUnknowns) {
-  size_t rank = echelonMatrix.Rank();
-  bool hasZeroBColumn =
-      std::any_of(echelonMatrix.begin(), echelonMatrix.end(),
-                  [numUnknowns](const T& val) { return val == 0; });
-
-  if (rank == echelonMatrix.nCols() - 1) {
-    return SolutionType::EXACT_SOLUTION;
-  } else if (hasZeroBColumn) {
-    return SolutionType::INFINITE_SOLUTIONS;
-  } else {
-    return SolutionType::NO_SOLUTION;
-  }
-}
 
 
 template <typename T>
@@ -1864,9 +1878,10 @@ std::string printLinearCombination(const std::vector<std::vector<double>>& xsExp
 
 template <typename T>
 Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
+    size_t numUnknowns = A.nCols();
     Matrix<T> augmented = A.augmentedMatrix(b);
     Matrix<T> echelonMatrix = augmented.rowEchelon();
-    size_t numUnknowns = echelonMatrix.nCols() - 1;
+   
     SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
 
     switch (solutionType) {
