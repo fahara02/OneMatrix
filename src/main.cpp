@@ -331,12 +331,12 @@ int main() {
     Solution<double> solution = solver_AX_b(A, b);
 
     // Printing the solution
-    if (solution.type == SolutionType::EXACT_SOLUTION_XP) {
+    if (solution.type == SolutionType::EXACT_SOLUTION) {
       std::cout << "Exact solution (Xp):" << std::endl;
       for (size_t i = 0; i < solution.values.size(); ++i) {
         std::cout << "x" << i + 1 << " = " << solution.values[i] << std::endl;
       }
-    } else if (solution.type == SolutionType::INFINITE_SOLUTIONS_XP_XS) {
+    } else if (solution.type == SolutionType::INFINITE_SOLUTIONS) {
       std::cout << "Infinite solutions. Particular solution (Xp):" << std::endl;
       for (size_t i = 0; i < solution.values.size(); ++i) {
         std::cout << "x" << i + 1 << " = " << solution.values[i] << std::endl;
