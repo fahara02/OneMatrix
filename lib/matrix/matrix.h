@@ -96,15 +96,6 @@ struct not_solvable : public std::exception {
 enum class VectorType { RowVector, ColumnVector };
 enum class Orientation { Row, Column };
 
-// template<typename T>
-// struct Solution {
-//     SolutionType type;
-//     std::vector<T> values;
-//     std::vector<std::string> linearComb;
-// };
-
-//enum class SliceType { Row, Column };
-
 #define EPSILON 0.0000000001
 #define EQUAL(a, b) (abs((a) - (b)) < EPSILON)
 
@@ -388,22 +379,16 @@ class Matrix {
     for_ij(m.nRows(), m.nCols()) result(i, j) = scalar / m(i, j);
     return result;
   }
-  Matrix& operator+=(T scalar);
-  //   Matrix& operator+=(T scalar) {
-  //     // Perform addition element-wise with the scalar value
-  //     // Parallelization pragma
-  //     #pragma omp parallel for collapse(2)
-  //     for_ij(nRows(), nCols()) {
-  //         (*this)(i, j) += scalar;
-  //     }
-  //     return *this;
-  // }
 
-  //   Matrix operator+=(double scalar) {
-  // #pragma omp parallel for
-  //     for_index(i, mData.size()) mData[i] += scalar;
-  //     return *this;
-  //   }
+  Matrix& operator+=(T scalar) {
+// Perform addition element-wise with the scalar value
+// Parallelization pragma
+#pragma omp parallel for collapse(2)
+    for_ij(nRows(), nCols()) {
+      (*this)(i, j) += scalar;
+    }
+    return *this;
+  }
 
   Matrix operator-=(double scalar) {
 #pragma omp parallel for
@@ -506,14 +491,8 @@ class Matrix {
     if (nRows() != m.nRows() || nCols() != m.nCols())
       throw std::invalid_argument("Matrix sizes do not match");
 
-    // Determine the result type of the addition using std::common_type
     using result_type = typename std::common_type<T, T2>::type;
-    // Promote to Matrix<float> if T is int
-    // if constexpr (std::is_same_v<T, int>) {
-    //  // std::cout<<"hello"<<std::endl;
-    //     *this = static_cast<Matrix<float>>(*this);
 
-    // }
     Matrix<float> temp(*this);
     // Perform addition element-wise
     for (size_t i = 0; i < nRows(); ++i) {
@@ -526,35 +505,6 @@ class Matrix {
     *this = temp;
     return (*this);
   }
-
-  // Define the template function for the addition assignment operator
-  //  template<typename T2>
-  //   Matrix& operator+=(const Matrix<T2>& m) {
-  //       // Perform size checking using the macro
-  //       CHECK_SIZE(m);
-
-  //       // Determine the superior type using std::common_type
-  //       using result_type = typename std::common_type<T, T2>::type;
-
-  //       // Perform addition element-wise
-  //       // Parallelization pragma
-  //       #pragma omp parallel for collapse(2)
-  //       for_ij(nRows(), nCols()) {
-  //           (*this)(i, j) += static_cast<T>(static_cast<result_type>((*this)(i, j)) + static_cast<result_type>(m(i, j)));
-  //       }
-
-  //       return *this;
-  //   }
-
-  // template<typename T2>
-  //   Matrix& operator+=(const Matrix<T2>& m);
-
-  //   Matrix& operator+=(const Matrix& other) {
-  //     CHECK_SIZE(other);
-  // #pragma omp parallel for collapse(2)
-  //     for_ij(other.nRows(), other.nCols()) operator()(i, j) += other(i, j);
-  //     return *this;
-  //   }
 
   Matrix& operator-=(const Matrix& other) {
     CHECK_SIZE(other);
@@ -769,9 +719,58 @@ class Matrix {
     }
   };
 
+  class const_iterator {
+   private:
+    size_t mRow;
+    size_t mCol;
+    const Matrix<T>* mMatrixPtr;  // Use const Matrix<T>* for const_iterator
+
+   public:
+    const_iterator(size_t row, size_t col, const Matrix<T>* matrixPtr)
+        : mRow(row), mCol(col), mMatrixPtr(matrixPtr) {}
+
+    // Provide read-only access to the element
+    const T& operator*() const {
+      if (mRow >= mMatrixPtr->nRows() || mCol >= mMatrixPtr->nCols()) {
+        throw std::out_of_range("Iterator out of range");
+      }
+      return (*mMatrixPtr)(mRow, mCol);
+    }
+
+    // Make comparison operators const-correct
+    bool operator==(const const_iterator& other) const {
+      return (mRow == other.mRow && mCol == other.mCol);
+    }
+
+    bool operator!=(const const_iterator& other) const {
+      return !(*this == other);
+    }
+
+    // Implement the ++ operator for const_iterator
+    const_iterator& operator++() {
+      ++mCol;
+      if (mCol == mMatrixPtr->nCols()) {
+        ++mRow;
+        mCol = 0;
+      }
+      return *this;
+    }
+
+    // Implement the post-increment operator for const_iterator
+    const_iterator operator++(int) {
+      const_iterator temp = *this;
+      ++(*this);
+      return temp;
+    }
+  };
+  
   iterator begin() { return iterator(0, 0, this); }
 
   iterator end() { return iterator(mRows, 0, this); }
+  
+  const_iterator begin() const { return const_iterator(0, 0, this); }
+
+  const_iterator end() const { return const_iterator(mRows, 0, this); }
 
   typename std::vector<T>::iterator row_begin(size_t row) {
     if (row >= mRows) {
@@ -1739,25 +1738,41 @@ std::vector<T> backSubstitution(const Matrix<T>& echelonMatrix) {
   return solution;
 }
 
+// template <typename T>
+// SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
+//                               size_t numUnknowns) {
+//   size_t rank = echelonMatrix.Rank();
+//   if (rank == echelonMatrix.nCols() - 1) {
+//     return SolutionType::EXACT_SOLUTION_XP;
+//   } else {
+//     bool noSolution = true;
+//     for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
+//       if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
+//         noSolution = false;
+//         break;
+//       }
+//     }
+//     if (noSolution) {
+//       return SolutionType::NO_SOLUTION;
+//     } else {
+//       return SolutionType::INFINITE_SOLUTIONS_XP_XS;
+//     }
+//   }
+// }
 template <typename T>
 SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
                               size_t numUnknowns) {
   size_t rank = echelonMatrix.Rank();
+  bool hasZeroBColumn =
+      std::any_of(echelonMatrix.begin(), echelonMatrix.end(),
+                  [numUnknowns](const T& val) { return val == 0; });
+
   if (rank == echelonMatrix.nCols() - 1) {
     return SolutionType::EXACT_SOLUTION_XP;
+  } else if (hasZeroBColumn) {
+    return SolutionType::INFINITE_SOLUTIONS_XP_XS;
   } else {
-    bool noSolution = true;
-    for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
-      if (echelonMatrix(i, echelonMatrix.nCols() - 1) == 0) {
-        noSolution = false;
-        break;
-      }
-    }
-    if (noSolution) {
-      return SolutionType::NO_SOLUTION;
-    } else {
-      return SolutionType::INFINITE_SOLUTIONS_XP_XS;
-    }
+    return SolutionType::NO_SOLUTION;
   }
 }
 template <typename T>
