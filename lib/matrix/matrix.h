@@ -1708,8 +1708,8 @@ void print_matrix(const Matrix<T>& matrix) {
 }
 
 enum class SolutionType {
-  EXACT_SOLUTION_XP,         // Unique solution exists
-  INFINITE_SOLUTIONS_XP_XS,  // Infinite solutions exist
+  EXACT_SOLUTION,         // Unique solution exists
+  INFINITE_SOLUTIONS,  // Infinite solutions exist
   NO_SOLUTION,
   ERROR  // No solution exists
 };
@@ -1747,51 +1747,14 @@ SolutionType findSolutionType(const Matrix<T>& echelonMatrix,
                   [numUnknowns](const T& val) { return val == 0; });
 
   if (rank == echelonMatrix.nCols() - 1) {
-    return SolutionType::EXACT_SOLUTION_XP;
+    return SolutionType::EXACT_SOLUTION;
   } else if (hasZeroBColumn) {
-    return SolutionType::INFINITE_SOLUTIONS_XP_XS;
+    return SolutionType::INFINITE_SOLUTIONS;
   } else {
     return SolutionType::NO_SOLUTION;
   }
 }
-// template <typename T>
-// void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
-//                              std::vector<size_t>& pivotColumns,
-//                              std::vector<size_t>& freeColumns) {
-//   size_t numRows = rrefMatrix.nRows();
-//   size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
 
-//   for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
-//     bool foundPivot = false;
-//     for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-//       if (rrefMatrix(rowIdx, colIdx) != 0) {
-//         pivotColumns.push_back(colIdx);
-//         foundPivot = true;
-//         break;
-//       }
-//     }
-//     if (!foundPivot) {
-//       // If no pivot is found in this row, all columns in this row are free columns
-//       for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-//         freeColumns.push_back(colIdx);
-//       }
-//       // No need to check further rows
-//       break;
-//     }
-//   }
-
-//   // Remove pivot columns from freeColumns
-//   std::sort(pivotColumns.begin(), pivotColumns.end());
-//   std::sort(freeColumns.begin(), freeColumns.end());
-//   std::vector<size_t> intersection;
-//   std::set_intersection(pivotColumns.begin(), pivotColumns.end(),
-//                         freeColumns.begin(), freeColumns.end(),
-//                         std::back_inserter(intersection));
-//   for (auto col : intersection) {
-//     freeColumns.erase(std::remove(freeColumns.begin(), freeColumns.end(), col),
-//                       freeColumns.end());
-//   }
-// }
 
 template <typename T>
 void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
@@ -1879,13 +1842,15 @@ std::vector<std::vector<T>> calculateXs(const Matrix<T>& rrefMatrix,
     return xsExpressions;
 }
 
+
 std::string printLinearCombination(const std::vector<std::vector<double>>& xsExpressions) {
     std::ostringstream linearCombStream;
     for (size_t i = 0; i < xsExpressions.size(); ++i) {
         linearCombStream << "C" << i + 1 << " * (";
-        for (size_t j = 0; j < xsExpressions[i].size(); ++j) {
-            linearCombStream << "X" << j + 1 << " = " << xsExpressions[i][j];
-            if (j < xsExpressions[i].size() - 1) {
+        const auto& xs = xsExpressions[i];
+        for (size_t j = 0; j < xs.size(); ++j) {
+            linearCombStream << "X" << j + 1 << " = " << xs[j];
+            if (j < xs.size() - 1) {
                 linearCombStream << ", ";
             }
         }
@@ -1905,13 +1870,13 @@ Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
     SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
 
     switch (solutionType) {
-        case SolutionType::EXACT_SOLUTION_XP: {
+        case SolutionType::EXACT_SOLUTION: {
             std::vector<T> xp = backSubstitution(echelonMatrix);
             return {solutionType, xp, ""};
         }
         case SolutionType::NO_SOLUTION:
             return {solutionType, {}, "No solution exists."};
-        case SolutionType::INFINITE_SOLUTIONS_XP_XS: {
+        case SolutionType::INFINITE_SOLUTIONS: {
             Matrix<T> rrefMatrix = augmented.rref();
             std::vector<size_t> pivotColumns;
             std::vector<size_t> freeColumns;
@@ -1920,6 +1885,7 @@ Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
             calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
             std::vector<std::vector<T>> xsVectors =
                 calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
+               
             std::string linearComb = printLinearCombination(xsVectors);
             return {solutionType, xp, linearComb};
         }
