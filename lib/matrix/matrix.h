@@ -1724,28 +1724,7 @@ struct Solution {
   std::string linearComb;  // For infinite solutions
 };
 
-template <typename T>
-bool isConsistent(const Matrix<T>& echelonMatrix) {
-  for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
-    bool allZero = true;
-    for (size_t j = 0; j < echelonMatrix.nCols() - 1; ++j) {
-      if (echelonMatrix(i, j) != 0) {
-        allZero = false;
-        break;
-      }
-    }
-    if (allZero && echelonMatrix(i, echelonMatrix.nCols() - 1) != 0) {
-      return false;  // Inconsistent equations
-    }
-  }
-  return true;  // Consistent equations
-}
 
-// Function to check if the system has a unique solution
-template <typename T>
-bool hasUniqueSolution(const Matrix<T>& echelonMatrix) {
-  return echelonMatrix.nRows() == echelonMatrix.nCols() - 1;
-}
 
 // Function to perform back substitution
 template <typename T>
@@ -1763,26 +1742,6 @@ std::vector<T> backSubstitution(const Matrix<T>& echelonMatrix) {
   return solution;
 }
 
-template <typename T>
-bool hasZeroPivotColumn(const Matrix<T>& echelonMatrix) {
-  for (size_t i = 0; i < echelonMatrix.nRows(); ++i) {
-    if (echelonMatrix(i, i) == 0) {
-      return true;  // At least one diagonal element (pivot) is zero
-    }
-  }
-  return false;  // All diagonal elements (pivots) are non-zero
-}
-
-// template <typename T>
-// bool isZeroRow(const Matrix<T>& matrix, size_t rowIdx) {
-//   size_t numCols = matrix.nCols();
-//   for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-//     if (matrix(rowIdx, colIdx) != 0) {
-//       return false;
-//     }
-//   }
-//   return true;
-// }
 
 template <typename T>
 SolutionType findSolutionType(const Matrix<T>& echelonMatrix, size_t numUnknowns) {
