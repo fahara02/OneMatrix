@@ -1527,7 +1527,7 @@ class Matrix {
         U(i, j) /= pivot;
       }
 
-      // Calculate the normalized row echelon form and populate L and U simultaneously
+      
       for (size_t j = i + 1; j < n; ++j) {
         L(j, i) = A(j, i) / U(i, i);
       }
@@ -1714,12 +1714,22 @@ enum class SolutionType {
 
 };
 
+
+// template <typename T>
+// struct Solution {
+//   SolutionType type;
+
+//   std::vector<T> xp;  // Exact solution
+//   std::vector<std::vector<T>> xs;  // Infinite solutions
+//   std::string linearComb;  // For infinite solutions
+// };
 template <typename T>
 struct Solution {
-  SolutionType type;
+    SolutionType type;
 
-  std::vector<T> values;
-  std::string linearComb;  // For infinite solutions
+    Matrix<T> XP;  // Exact solution
+    std::vector<Matrix<T>> XS;  // Infinite solutions
+    std::string linearComb;  // For infinite solutions
 };
 
 
@@ -1737,7 +1747,7 @@ SolutionType findSolutionType(const Matrix<T>& rrefMatrix, size_t numUnknowns) {
             std::cout<<"hasNonZeroAZeroBColumn\n";
         }
 
-        if (rrefMatrix(i, AColumns) == 0 && rrefMatrix(i, bColumn ) != 0) {
+        if (rrefMatrix(i, AColumns) == 0 && rrefMatrix(i,  bColumn ) != 0) {
             hasAllZeroANonZeroBColumn = true;
             std::cout<<"hasAllZeroANonZeroBColumn \n";
         }
@@ -1876,6 +1886,40 @@ std::string printLinearCombination(const std::vector<std::vector<double>>& xsExp
     return linearCombStream.str();
 }
 
+// template <typename T>
+// Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
+//     size_t numUnknowns = A.nCols();
+//     Matrix<T> augmented = A.augmentedMatrix(b);
+//     Matrix<T> echelonMatrix = augmented.rowEchelon();
+   
+//     SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
+
+//     switch (solutionType) {
+//         case SolutionType::EXACT_SOLUTION: {
+//             std::vector<T> xp = backSubstitution(echelonMatrix);
+//             std::vector<std::vector<T>> xs;  // Empty xs for exact solution
+//             return {solutionType, xp, xs, ""};
+//         }
+//         case SolutionType::NO_SOLUTION:
+//             return {solutionType, {}, {}, "No solution exists."};
+//         case SolutionType::INFINITE_SOLUTIONS: {
+//             Matrix<T> rrefMatrix = augmented.rref();
+//             std::vector<size_t> pivotColumns;
+//             std::vector<size_t> freeColumns;
+//             findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
+//             std::vector<T> xp(numUnknowns, 0);
+//             calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
+//             std::vector<std::vector<T>> xs =
+//                 calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
+               
+//             std::string linearComb = printLinearCombination(xs);
+//             return {solutionType, xp, xs, linearComb};
+//         }
+//     }
+    
+//     // Default return statement in case no solution type matches
+//     return {SolutionType::NO_SOLUTION, {}, {}, "Unexpected error occurred."};
+// }
 template <typename T>
 Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
     size_t numUnknowns = A.nCols();
@@ -1887,24 +1931,35 @@ Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
     switch (solutionType) {
         case SolutionType::EXACT_SOLUTION: {
             std::vector<T> xp = backSubstitution(echelonMatrix);
-            return {solutionType, xp, ""};
+            Matrix<T> XP(xp, VectorType::ColumnVector); // Convert xp to XP
+            std::vector<Matrix<T>> xs;
+            // Empty xs for exact solution
+            return {solutionType, XP, xs, ""};
         }
         case SolutionType::NO_SOLUTION:
-            return {solutionType, {}, "No solution exists."};
+            return {solutionType, {}, {}, "No solution exists."};
         case SolutionType::INFINITE_SOLUTIONS: {
             Matrix<T> rrefMatrix = augmented.rref();
             std::vector<size_t> pivotColumns;
             std::vector<size_t> freeColumns;
+           
             findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
             std::vector<T> xp(numUnknowns, 0);
             calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
-            std::vector<std::vector<T>> xsVectors =
+            Matrix<T> XP(xp, VectorType::ColumnVector); // Convert xp to XP
+            std::vector<std::vector<T>> xs =
                 calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
-               
-            std::string linearComb = printLinearCombination(xsVectors);
-            return {solutionType, xp, linearComb};
+            std::vector<Matrix<T>> XS;
+            for (const auto& x : xs) {
+                XS.emplace_back(x, VectorType::ColumnVector); // Convert each x to X
+            }
+            std::string linearComb = printLinearCombination(xs);
+            return {solutionType, XP, XS, linearComb};
         }
     }
+    
+    // Default return statement in case no solution type matches
+    return {SolutionType::NO_SOLUTION, {}, {}, "Unexpected error occurred."};
 }
 
 

@@ -313,61 +313,43 @@ int main() {
   //   }
 
   // Define matrix A and vector b
-  Matrix<double> A(3, 4, {1, 2, 2, 2, 2, 4, 6, 8, 3, 6, 8, 10});
-  //Matrix<double> B ( 3, 4, {1, 2, 2, 2, 1, 4, 6, 8, 3, 6, 8, 10});
-  std::vector<double> b = {1, 5, 6};
+  Matrix<double> A(3, 4, {1, 3, 0, 2,
+                          0, 0, 1, 4, 
+                          1, 3, 1, 6});
+  // // Matrix<double> A(3, 3, {1, 1, 2,
+  //                       2, 4, -3, 
+  //                       3, 6, -5});
+std::cout << "Original matrix:\n";
+print_matrix(A);
 
-  std::cout << "Matrix A augmented rref:\n";
-  print_matrix(A.augmentedMatrix(b).rref());
+std::vector<double> b = {1, 6, 7};
+std::cout << "Matrix A augmented:\n";
+print_matrix(A.augmentedMatrix(b));
 
-  // Matrix<double> augmentedMatrix = A.augmentedMatrix(b);
-  // std::cout << "Matrix A and b augmented row echelon:\n";
-  // print_matrix(augmentedMatrix.rowEchelon());
+std::cout << "Matrix A augmented rref:\n";
+print_matrix(A.augmentedMatrix(b).rref());
 
-  // Solve the system
-
-  try {
-
+try {
     Solution<double> solution = solver_AX_b(A, b);
 
     // Printing the solution
     if (solution.type == SolutionType::EXACT_SOLUTION) {
-      std::cout << "Exact solution (Xp):" << std::endl;
-      for (size_t i = 0; i < solution.values.size(); ++i) {
-        std::cout << "x" << i + 1 << " = " << solution.values[i] << std::endl;
-      }
+        std::cout << "Exact solution (Xp):\n";
+       print_matrix(solution.XP);
     } else if (solution.type == SolutionType::INFINITE_SOLUTIONS) {
-      std::cout << "Infinite solutions. Particular solution (Xp):" << std::endl;
-      for (size_t i = 0; i < solution.values.size(); ++i) {
-        std::cout << "x" << i + 1 << " = " << solution.values[i] << std::endl;
-      }
-      std::cout << "Linear combination of special solutions (Xs): "
-                << solution.linearComb << std::endl;
+        std::cout << "Infinite solutions. Particular solution (Xp):\n";
+       print_matrix(solution.XP);
+       print_matrix(solution.XS[0]);
+       print_matrix(solution.XS[1]);
+        std::cout << "Linear combination of special solutions (Xs):\n"
+                  << solution.linearComb << std::endl;
     } else {
-      std::cout << "No solution exists." << std::endl;
+        std::cout << "No solution exists." << std::endl;
     }
-
-    //  Solution<double> solution2 = solver_AX_b2(B, b);
-
-    // // Printing the solution
-    // if (solution2.type == SolutionType::EXACT_SOLUTION_XP) {
-    //   std::cout << "Exact solution (Xp):" << std::endl;
-    //   for (size_t i = 0; i < solution2.values.size(); ++i) {
-    //     std::cout << "x" << i + 1 << " = " << solution2.values[i] << std::endl;
-    //   }
-    // } else if (solution2.type == SolutionType::INFINITE_SOLUTIONS_XP_XS) {
-    //   std::cout << "Infinite solutions. Particular solution (Xp):" << std::endl;
-    //   for (size_t i = 0; i < solution2.values.size(); ++i) {
-    //     std::cout << "x" << i + 1 << " = " << solution2.values[i] << std::endl;
-    //   }
-    //   std::cout << "Linear combination of special solutions (Xs): "
-    //             << solution2.linearComb << std::endl;
-    // } else {
-    //   std::cout << "No solution exists." << std::endl;
-    // }
-  } catch (const std::exception& e) {
+} catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
-  }
+}
+
 
   return 0;
 }
