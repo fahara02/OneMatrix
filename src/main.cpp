@@ -2,9 +2,8 @@
 #include <iostream>
 #include <ratio>
 #include <sstream>
-#include "aero.h"
+
 #include "matrix.h"
-#include "vlm.h"
 
 int main() {
   // Matrix<int> mat(3, 4, {1, 2, 1, 1, 2, 4, 2, 2, 3, 6, 3, 4});
@@ -311,45 +310,53 @@ int main() {
   //           std::cout << "No solution found." << std::endl;
   //           break;
   //   }
+  float Kr = 0.299f, Kg = 0.587f, Kb = 0.114f;
+  float uScale = 0.5f, vScale = 0.5f;
+
+  // Initialize using nested initializer lists
+  Matrix<float> rgbToYUV = {
+      {Kr, Kg, Kb},
+      {-Kr / (1.0f - Kb) * uScale, -Kg / (1.0f - Kb) * uScale, uScale},
+      {vScale, -Kg / (1.0f - Kr) * vScale, -Kb / (1.0f - Kr) * vScale}};
+
+  // Print the matrix to verify
+  print_matrix(rgbToYUV);
 
   // Define matrix A and vector b
-  Matrix<double> A(3, 4, {1, 3, 0, 2,
-                          0, 0, 1, 4, 
-                          1, 3, 1, 6});
+  Matrix<double> A(3, 4, {1, 3, 0, 2, 0, 0, 1, 4, 1, 3, 1, 6});
   // // Matrix<double> A(3, 3, {1, 1, 2,
-  //                       2, 4, -3, 
+  //                       2, 4, -3,
   //                       3, 6, -5});
-std::cout << "Original matrix:\n";
-print_matrix(A);
+  std::cout << "Original matrix:\n";
+  print_matrix(A);
 
-std::vector<double> b = {1, 6, 7};
-std::cout << "Matrix A augmented:\n";
-print_matrix(A.augmentedMatrix(b));
+  std::vector<double> b = {1, 6, 7};
+  std::cout << "Matrix A augmented:\n";
+  print_matrix(A.augmentedMatrix(b));
 
-std::cout << "Matrix A augmented rref:\n";
-print_matrix(A.augmentedMatrix(b).rref());
+  std::cout << "Matrix A augmented rref:\n";
+  print_matrix(A.augmentedMatrix(b).rref());
 
-try {
+  try {
     Solution<double> solution = solver_AX_b(A, b);
 
     // Printing the solution
     if (solution.type == SolutionType::EXACT_SOLUTION) {
-        std::cout << "Exact solution (Xp):\n";
-       print_matrix(solution.XP);
+      std::cout << "Exact solution (Xp):\n";
+      print_matrix(solution.XP);
     } else if (solution.type == SolutionType::INFINITE_SOLUTIONS) {
-        std::cout << "Infinite solutions. Particular solution (Xp):\n";
-       print_matrix(solution.XP);
-       print_matrix(solution.XS[0]);
-       print_matrix(solution.XS[1]);
-        std::cout << "Linear combination of special solutions (Xs):\n"
-                  << solution.linearComb << std::endl;
+      std::cout << "Infinite solutions. Particular solution (Xp):\n";
+      print_matrix(solution.XP);
+      print_matrix(solution.XS[0]);
+      print_matrix(solution.XS[1]);
+      std::cout << "Linear combination of special solutions (Xs):\n"
+                << solution.linearComb << std::endl;
     } else {
-        std::cout << "No solution exists." << std::endl;
+      std::cout << "No solution exists." << std::endl;
     }
-} catch (const std::exception& e) {
+  } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
-}
-
+  }
 
   return 0;
 }

@@ -763,11 +763,11 @@ class Matrix {
       return temp;
     }
   };
-  
+
   iterator begin() { return iterator(0, 0, this); }
 
   iterator end() { return iterator(mRows, 0, this); }
-  
+
   const_iterator begin() const { return const_iterator(0, 0, this); }
 
   const_iterator end() const { return const_iterator(mRows, 0, this); }
@@ -1527,7 +1527,6 @@ class Matrix {
         U(i, j) /= pivot;
       }
 
-      
       for (size_t j = i + 1; j < n; ++j) {
         L(j, i) = A(j, i) / U(i, i);
       }
@@ -1708,58 +1707,48 @@ void print_matrix(const Matrix<T>& matrix) {
 }
 
 enum class SolutionType {
-  EXACT_SOLUTION,         // Unique solution exists
+  EXACT_SOLUTION,      // Unique solution exists
   INFINITE_SOLUTIONS,  // Infinite solutions exist
   NO_SOLUTION
 
 };
 
-
-// template <typename T>
-// struct Solution {
-//   SolutionType type;
-
-//   std::vector<T> xp;  // Exact solution
-//   std::vector<std::vector<T>> xs;  // Infinite solutions
-//   std::string linearComb;  // For infinite solutions
-// };
 template <typename T>
 struct Solution {
-    SolutionType type;
+  SolutionType type;
 
-    Matrix<T> XP;  // Exact solution
-    std::vector<Matrix<T>> XS;  // Infinite solutions
-    std::string linearComb;  // For infinite solutions
+  Matrix<T> XP;               // Exact solution
+  std::vector<Matrix<T>> XS;  // Infinite solutions
+  std::string linearComb;     // For infinite solutions
 };
-
 
 template <typename T>
 SolutionType findSolutionType(const Matrix<T>& rrefMatrix, size_t numUnknowns) {
-    bool hasNonZeroAZeroBColumn = false;
-    bool hasAllZeroANonZeroBColumn = false;
+  bool hasNonZeroAZeroBColumn = false;
+  bool hasAllZeroANonZeroBColumn = false;
 
-    size_t nCols = rrefMatrix.nCols();
-    size_t bColumn = nCols -1;
-    size_t AColumns = nCols -2;
-    for (size_t i = 0; i < rrefMatrix.nRows(); ++i) {
-        if (rrefMatrix(i, AColumns) != 0 && rrefMatrix(i, bColumn ) == 0) {
-            hasNonZeroAZeroBColumn = true;
-            std::cout<<"hasNonZeroAZeroBColumn\n";
-        }
-
-        if (rrefMatrix(i, AColumns) == 0 && rrefMatrix(i,  bColumn ) != 0) {
-            hasAllZeroANonZeroBColumn = true;
-            std::cout<<"hasAllZeroANonZeroBColumn \n";
-        }
+  size_t nCols = rrefMatrix.nCols();
+  size_t bColumn = nCols - 1;
+  size_t AColumns = nCols - 2;
+  for (size_t i = 0; i < rrefMatrix.nRows(); ++i) {
+    if (rrefMatrix(i, AColumns) != 0 && rrefMatrix(i, bColumn) == 0) {
+      hasNonZeroAZeroBColumn = true;
+      std::cout << "hasNonZeroAZeroBColumn\n";
     }
 
-    if (hasNonZeroAZeroBColumn || hasAllZeroANonZeroBColumn) {
-        return SolutionType::NO_SOLUTION;
-    } else if (rrefMatrix.Rank() < numUnknowns) {
-        return SolutionType::INFINITE_SOLUTIONS;
-    } else {
-        return SolutionType::EXACT_SOLUTION;
+    if (rrefMatrix(i, AColumns) == 0 && rrefMatrix(i, bColumn) != 0) {
+      hasAllZeroANonZeroBColumn = true;
+      std::cout << "hasAllZeroANonZeroBColumn \n";
     }
+  }
+
+  if (hasNonZeroAZeroBColumn || hasAllZeroANonZeroBColumn) {
+    return SolutionType::NO_SOLUTION;
+  } else if (rrefMatrix.Rank() < numUnknowns) {
+    return SolutionType::INFINITE_SOLUTIONS;
+  } else {
+    return SolutionType::EXACT_SOLUTION;
+  }
 }
 
 // Function to perform back substitution
@@ -1778,38 +1767,36 @@ std::vector<T> backSubstitution(const Matrix<T>& echelonMatrix) {
   return solution;
 }
 
-
-
 template <typename T>
 void findPivotAndFreeColumns(const Matrix<T>& rrefMatrix,
                              std::vector<size_t>& pivotColumns,
                              std::vector<size_t>& freeColumns) {
-    size_t numRows = rrefMatrix.nRows();
-    size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
+  size_t numRows = rrefMatrix.nRows();
+  size_t numCols = rrefMatrix.nCols() - 1;  // Exclude the last column (b)
 
-    std::vector<bool> columnFound(numCols, false);
+  std::vector<bool> columnFound(numCols, false);
 
-    for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
-        bool foundPivot = false;
-        for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-            if (rrefMatrix(rowIdx, colIdx) != 0) {
-                pivotColumns.push_back(colIdx);
-                columnFound[colIdx] = true;
-                foundPivot = true;
-                break;
-            }
-        }
-        if (!foundPivot) {
-            // If no pivot is found in this row, all columns in this row are free columns
-            for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
-                if (!columnFound[colIdx]) {
-                    freeColumns.push_back(colIdx);
-                }
-            }
-            // No need to check further rows
-            break;
-        }
+  for (size_t rowIdx = 0; rowIdx < numRows; ++rowIdx) {
+    bool foundPivot = false;
+    for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+      if (rrefMatrix(rowIdx, colIdx) != 0) {
+        pivotColumns.push_back(colIdx);
+        columnFound[colIdx] = true;
+        foundPivot = true;
+        break;
+      }
     }
+    if (!foundPivot) {
+      // If no pivot is found in this row, all columns in this row are free columns
+      for (size_t colIdx = 0; colIdx < numCols; ++colIdx) {
+        if (!columnFound[colIdx]) {
+          freeColumns.push_back(colIdx);
+        }
+      }
+      // No need to check further rows
+      break;
+    }
+  }
 }
 
 template <typename T>
@@ -1832,136 +1819,102 @@ std::vector<std::vector<T>> calculateXs(const Matrix<T>& rrefMatrix,
                                         const std::vector<size_t>& pivotColumns,
                                         const std::vector<size_t>& freeColumns,
                                         size_t numCols) {
-    std::vector<std::vector<T>> xsExpressions;
-    size_t numXs = freeColumns.size();
+  std::vector<std::vector<T>> xsExpressions;
+  size_t numXs = freeColumns.size();
 
-    for (size_t xsIdx = 0; xsIdx < numXs; ++xsIdx) {
-        std::vector<T> xs(numCols, 0);
-        size_t freeCol = freeColumns[xsIdx];
-        xs[freeCol] = 1;
+  for (size_t xsIdx = 0; xsIdx < numXs; ++xsIdx) {
+    std::vector<T> xs(numCols, 0);
+    size_t freeCol = freeColumns[xsIdx];
+    xs[freeCol] = 1;
 
-        for (size_t i = 0; i < pivotColumns.size(); ++i) {
-            size_t pivotCol = pivotColumns[i];
-            T coefficient = 0;  // Initialize coefficient to 0
-            bool foundNonZero = false;
+    for (size_t i = 0; i < pivotColumns.size(); ++i) {
+      size_t pivotCol = pivotColumns[i];
+      T coefficient = 0;  // Initialize coefficient to 0
+      bool foundNonZero = false;
 
-            for (size_t rowIdx = 0; rowIdx < rrefMatrix.nRows(); ++rowIdx) {
-                if (rrefMatrix(rowIdx, pivotCol) != 0) {
-                    if (!foundNonZero) {
-                        coefficient = -rrefMatrix(rowIdx, freeCol) / rrefMatrix(rowIdx, pivotCol);
-                        foundNonZero = true;
-                    } else {
-                        coefficient *= rrefMatrix(rowIdx, pivotCol);
-                        coefficient -= rrefMatrix(rowIdx, freeCol);
-                    }
-                }
-            }
-
-            xs[pivotCol] = coefficient;
+      for (size_t rowIdx = 0; rowIdx < rrefMatrix.nRows(); ++rowIdx) {
+        if (rrefMatrix(rowIdx, pivotCol) != 0) {
+          if (!foundNonZero) {
+            coefficient =
+                -rrefMatrix(rowIdx, freeCol) / rrefMatrix(rowIdx, pivotCol);
+            foundNonZero = true;
+          } else {
+            coefficient *= rrefMatrix(rowIdx, pivotCol);
+            coefficient -= rrefMatrix(rowIdx, freeCol);
+          }
         }
+      }
 
-        xsExpressions.push_back(xs);
+      xs[pivotCol] = coefficient;
     }
 
-    return xsExpressions;
+    xsExpressions.push_back(xs);
+  }
+
+  return xsExpressions;
 }
 
-
-std::string printLinearCombination(const std::vector<std::vector<double>>& xsExpressions) {
-    std::ostringstream linearCombStream;
-    for (size_t i = 0; i < xsExpressions.size(); ++i) {
-        linearCombStream << "C" << i + 1 << " * (";
-        const auto& xs = xsExpressions[i];
-        for (size_t j = 0; j < xs.size(); ++j) {
-            linearCombStream << "X" << j + 1 << " = " << xs[j];
-            if (j < xs.size() - 1) {
-                linearCombStream << ", ";
-            }
-        }
-        linearCombStream << ")";
-        if (i < xsExpressions.size() - 1) {
-            linearCombStream << " + ";
-        }
+std::string printLinearCombination(
+    const std::vector<std::vector<double>>& xsExpressions) {
+  std::ostringstream linearCombStream;
+  for (size_t i = 0; i < xsExpressions.size(); ++i) {
+    linearCombStream << "C" << i + 1 << " * (";
+    const auto& xs = xsExpressions[i];
+    for (size_t j = 0; j < xs.size(); ++j) {
+      linearCombStream << "X" << j + 1 << " = " << xs[j];
+      if (j < xs.size() - 1) {
+        linearCombStream << ", ";
+      }
     }
-    return linearCombStream.str();
+    linearCombStream << ")";
+    if (i < xsExpressions.size() - 1) {
+      linearCombStream << " + ";
+    }
+  }
+  return linearCombStream.str();
 }
 
-// template <typename T>
-// Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
-//     size_t numUnknowns = A.nCols();
-//     Matrix<T> augmented = A.augmentedMatrix(b);
-//     Matrix<T> echelonMatrix = augmented.rowEchelon();
-   
-//     SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
-
-//     switch (solutionType) {
-//         case SolutionType::EXACT_SOLUTION: {
-//             std::vector<T> xp = backSubstitution(echelonMatrix);
-//             std::vector<std::vector<T>> xs;  // Empty xs for exact solution
-//             return {solutionType, xp, xs, ""};
-//         }
-//         case SolutionType::NO_SOLUTION:
-//             return {solutionType, {}, {}, "No solution exists."};
-//         case SolutionType::INFINITE_SOLUTIONS: {
-//             Matrix<T> rrefMatrix = augmented.rref();
-//             std::vector<size_t> pivotColumns;
-//             std::vector<size_t> freeColumns;
-//             findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
-//             std::vector<T> xp(numUnknowns, 0);
-//             calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
-//             std::vector<std::vector<T>> xs =
-//                 calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
-               
-//             std::string linearComb = printLinearCombination(xs);
-//             return {solutionType, xp, xs, linearComb};
-//         }
-//     }
-    
-//     // Default return statement in case no solution type matches
-//     return {SolutionType::NO_SOLUTION, {}, {}, "Unexpected error occurred."};
-// }
 template <typename T>
 Solution<T> solver_AX_b(const Matrix<T>& A, const std::vector<T>& b) {
-    size_t numUnknowns = A.nCols();
-    Matrix<T> augmented = A.augmentedMatrix(b);
-    Matrix<T> echelonMatrix = augmented.rowEchelon();
-   
-    SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
+  size_t numUnknowns = A.nCols();
+  Matrix<T> augmented = A.augmentedMatrix(b);
+  Matrix<T> echelonMatrix = augmented.rowEchelon();
 
-    switch (solutionType) {
-        case SolutionType::EXACT_SOLUTION: {
-            std::vector<T> xp = backSubstitution(echelonMatrix);
-            Matrix<T> XP(xp, VectorType::ColumnVector); // Convert xp to XP
-            std::vector<Matrix<T>> xs;
-            // Empty xs for exact solution
-            return {solutionType, XP, xs, ""};
-        }
-        case SolutionType::NO_SOLUTION:
-            return {solutionType, {}, {}, "No solution exists."};
-        case SolutionType::INFINITE_SOLUTIONS: {
-            Matrix<T> rrefMatrix = augmented.rref();
-            std::vector<size_t> pivotColumns;
-            std::vector<size_t> freeColumns;
-           
-            findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
-            std::vector<T> xp(numUnknowns, 0);
-            calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
-            Matrix<T> XP(xp, VectorType::ColumnVector); // Convert xp to XP
-            std::vector<std::vector<T>> xs =
-                calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
-            std::vector<Matrix<T>> XS;
-            for (const auto& x : xs) {
-                XS.emplace_back(x, VectorType::ColumnVector); // Convert each x to X
-            }
-            std::string linearComb = printLinearCombination(xs);
-            return {solutionType, XP, XS, linearComb};
-        }
+  SolutionType solutionType = findSolutionType(echelonMatrix, numUnknowns);
+
+  switch (solutionType) {
+    case SolutionType::EXACT_SOLUTION: {
+      std::vector<T> xp = backSubstitution(echelonMatrix);
+      Matrix<T> XP(xp, VectorType::ColumnVector);  // Convert xp to XP
+      std::vector<Matrix<T>> xs;
+      // Empty xs for exact solution
+      return {solutionType, XP, xs, ""};
     }
-    
-    // Default return statement in case no solution type matches
-    return {SolutionType::NO_SOLUTION, {}, {}, "Unexpected error occurred."};
-}
+    case SolutionType::NO_SOLUTION:
+      return {solutionType, {}, {}, "No solution exists."};
+    case SolutionType::INFINITE_SOLUTIONS: {
+      Matrix<T> rrefMatrix = augmented.rref();
+      std::vector<size_t> pivotColumns;
+      std::vector<size_t> freeColumns;
 
+      findPivotAndFreeColumns(rrefMatrix, pivotColumns, freeColumns);
+      std::vector<T> xp(numUnknowns, 0);
+      calculateXP(rrefMatrix, pivotColumns, numUnknowns, xp);
+      Matrix<T> XP(xp, VectorType::ColumnVector);  // Convert xp to XP
+      std::vector<std::vector<T>> xs =
+          calculateXs(rrefMatrix, pivotColumns, freeColumns, numUnknowns);
+      std::vector<Matrix<T>> XS;
+      for (const auto& x : xs) {
+        XS.emplace_back(x, VectorType::ColumnVector);  // Convert each x to X
+      }
+      std::string linearComb = printLinearCombination(xs);
+      return {solutionType, XP, XS, linearComb};
+    }
+  }
+
+  // Default return statement in case no solution type matches
+  return {SolutionType::NO_SOLUTION, {}, {}, "Unexpected error occurred."};
+}
 
 #undef EPSILON
 #undef EQUAL

@@ -16,17 +16,11 @@ include(ClangFormat)
 add_clang_format_target(format-code ${PROJECT_SOURCE_DIR})
 
 
-add_subdirectory(src/aero)
-add_subdirectory(lib/matrix)
 
 
 
+add_executable(${BINARY_NAME} src/main.cpp   )
 
-add_executable(${BINARY_NAME} src/main.cpp src/core/vlm.cpp  )
-
-target_include_directories( ${BINARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/core/include )
+target_include_directories( ${BINARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src )
 
 
-target_link_libraries(${BINARY_NAME} PUBLIC aero)
-target_link_libraries(${BINARY_NAME} INTERFACE matrix)
-#add_dependencies(${BINARY_NAME} format-code)

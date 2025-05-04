@@ -2,3 +2,6 @@
 /build
 /CMakeUserPresets.json
 /info.txt
+CMakeFiles
+build.ninja
+CmakeCache.txt
