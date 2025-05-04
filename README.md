@@ -1,6 +1,6 @@
 # OneMatrix Library
 
-A header-only matrix mathematics library with comprehensive linear algebra operations.
+A header-only matrix mathematics library with comprehensive linear algebra operations inspired by the great teacher Professor Gilbert Strang from MIT-18.06 .
 
 ## Build System
 
