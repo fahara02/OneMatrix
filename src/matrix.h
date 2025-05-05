@@ -6,16 +6,63 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
+#include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
-#include <iomanip>
-#include <limits>
-#include <sstream>
 // namespace MAT {
+
+enum class VectorType { RowVector, ColumnVector };
+enum class Orientation { Row, Column };
+
+#define EPSILON 0.0000000001
+#define EQUAL(a, b) (abs((a) - (b)) < EPSILON)
+
+#define INDEX(r, c) ((m.mCols * (r)) + (c))
+
+#define for_index(i, dim) for (int i = 0; i < (dim); ++i)
+
+#define for_ij(r, c)               \
+  for (size_t i = 0; i < (r); ++i) \
+    for (size_t j = 0; j < (c); ++j)
+
+#define CHECK_SIZE(mat)                                          \
+  do {                                                           \
+    if (!((mat).nRows() == nRows() && (mat).nCols() == nCols())) \
+      throw incompatible_size();                                 \
+  } while (0)
+
+#define CHECK_ROW(r)              \
+  do {                            \
+    if ((r) < 0 || (r) > nRows()) \
+      throw row_outbound();       \
+  } while (0)
+
+#define CHECK_COLUMN(c)           \
+  do {                            \
+    if ((c) < 0 || (c) > nCols()) \
+      throw col_outbound();       \
+  } while (0)
+#define MATCH_ROW(r)         \
+  do {                       \
+    if ((r) != nRows())      \
+      throw bad_row_match(); \
+  } while (0)
+#define MATCH_COLUMN(c)      \
+  do {                       \
+    if ((c) != nCols())      \
+      throw bad_col_match(); \
+  } while (0)
+#define VALIDATE_INDEX(r, c) \
+  do {                       \
+    CHECK_ROW(r);            \
+    CHECK_COLUMN(c);         \
+  } while (0)
 
 struct divide_by_zero : public std::exception {
   virtual const char* what() const throw() {
@@ -93,53 +140,6 @@ struct not_solvable : public std::exception {
   const char* what() const throw() { return "System is not solvable"; }
 };
 
-enum class VectorType { RowVector, ColumnVector };
-enum class Orientation { Row, Column };
-
-#define EPSILON 0.0000000001
-#define EQUAL(a, b) (abs((a) - (b)) < EPSILON)
-
-#define INDEX(r, c) ((m.mCols * (r)) + (c))
-
-#define for_index(i, dim) for (int i = 0; i < (dim); ++i)
-
-#define for_ij(r, c)               \
-  for (size_t i = 0; i < (r); ++i) \
-    for (size_t j = 0; j < (c); ++j)
-
-#define CHECK_SIZE(mat)                                          \
-  do {                                                           \
-    if (!((mat).nRows() == nRows() && (mat).nCols() == nCols())) \
-      throw incompatible_size();                                 \
-  } while (0)
-
-#define CHECK_ROW(r)              \
-  do {                            \
-    if ((r) < 0 || (r) > nRows()) \
-      throw row_outbound();       \
-  } while (0)
-
-#define CHECK_COLUMN(c)           \
-  do {                            \
-    if ((c) < 0 || (c) > nCols()) \
-      throw col_outbound();       \
-  } while (0)
-#define MATCH_ROW(r)         \
-  do {                       \
-    if ((r) != nRows())      \
-      throw bad_row_match(); \
-  } while (0)
-#define MATCH_COLUMN(c)      \
-  do {                       \
-    if ((c) != nCols())      \
-      throw bad_col_match(); \
-  } while (0)
-#define VALIDATE_INDEX(r, c) \
-  do {                       \
-    CHECK_ROW(r);            \
-    CHECK_COLUMN(c);         \
-  } while (0)
-
 template <typename T>
 class Matrix {
  private:
@@ -179,7 +179,7 @@ class Matrix {
   }
 
   // Constructors and destructor...
-  Matrix() : mRows(0), mCols(0), mSize(0), mData(0) {}
+  Matrix() : mRows(0), mCols(0), mSize(0), mData() {}
 
   Matrix(size_t dimension)
       : mRows(dimension),
@@ -189,12 +189,13 @@ class Matrix {
 
   Matrix(size_t rows, size_t cols)
       : mRows(rows), mCols(cols), mSize(rows * cols), mData(rows * cols, 0) {}
-  //copy constructor
-  Matrix(const Matrix& matrix)
-      : mRows(matrix.mRows),
-        mCols(matrix.mCols),
-        mSize(matrix.mSize),
-        mData(matrix.mData) {}
+
+  // Copy constructor
+  Matrix(const Matrix& other)
+      : mRows(other.mRows),
+        mCols(other.mCols),
+        mSize(other.mSize),
+        mData(other.mData) {}
 
   //constructor for converting one type to other
   template <typename U>
@@ -1251,6 +1252,36 @@ class Matrix {
 
   Matrix getColumns(const Matrix<T> bin) { return filter(bin, true); }
 
+  Matrix<T> slice(size_t row_start, size_t row_end, size_t col_start,
+                  size_t col_end) const {
+    try {
+      // Validate row indices
+      if (row_start >= mRows || row_end > mRows || row_start > row_end) {
+        throw std::out_of_range("Invalid row slice indices");
+      }
+      // Validate column indices
+      if (col_start >= mCols || col_end > mCols || col_start > col_end) {
+        throw std::out_of_range("Invalid column slice indices");
+      }
+
+      size_t slice_rows = row_end - row_start;
+      size_t slice_cols = col_end - col_start;
+
+      Matrix<T> result(slice_rows, slice_cols);
+
+      for (size_t i = row_start; i < row_end; ++i) {
+        for (size_t j = col_start; j < col_end; ++j) {
+          result(i - row_start, j - col_start) = (*this)(i, j);
+        }
+      }
+
+      return result;
+    } catch (const std::exception& e) {
+      std::cerr << "Error: " << e.what() << std::endl;
+      throw;
+    }
+  }
+
   // region elementary matrix
 
   template <typename U>
@@ -1663,7 +1694,381 @@ class Matrix {
         augmented.rref()[{{col, 2 * col}, Orientation::Column}];
     return inverseMatrix;
   }
+  bool is_converged(const Matrix<T>& A) const {
+    for (size_t i = 1; i < A.nRows(); ++i) {
+      if (std::abs(A(i, i - 1)) > EPSILON)
+        return false;
+    }
+    return true;
+  }
+  T compute_imbalance() {
+    static_assert(std::is_floating_point_v<T>,
+                  "imbalanced calc requires floating-point types.");
+    if (!isSquare())
+      throw not_square();
 
+    const size_t n = nRows();
+    Matrix<T> imbalanced(*this);
+
+    std::vector<T> row_norms(n, 0), col_norms(n, 0);
+    for (size_t i = 0; i < n; ++i) {
+      for (size_t j = 0; j < n; ++j) {
+        if (i != j) {
+          T val = std::abs(imbalanced(i, j));
+          row_norms[i] += val;
+          col_norms[j] += val;
+        }
+      }
+    }
+    T max_ratio = 1;
+    for (size_t i = 0; i < n; ++i) {
+      if (row_norms[i] == 0 || col_norms[i] == 0)
+        continue;
+      T ratio = row_norms[i] / col_norms[i];
+      T inv_ratio = col_norms[i] / row_norms[i];
+      if (ratio > max_ratio)
+        max_ratio = ratio;
+      if (inv_ratio > max_ratio)
+        max_ratio = inv_ratio;
+    }
+    std::cout << "Max Imbalance Ratio: " << max_ratio << "\n";
+  }
+  Matrix<T> balanced_form_fast(size_t max_iterations = 5) const {
+    static_assert(std::is_floating_point_v<T>,
+                  "balanced_form requires floating-point types.");
+    if (!isSquare())
+      throw not_square();
+
+    const size_t n = nRows();
+    Matrix<T> balanced(*this);
+    const T radix = static_cast<T>(2);
+    const T eps = std::numeric_limits<T>::epsilon();
+    const T convergence_factor = static_cast<T>(0.95);
+    const T min_scaling = std::sqrt(radix);     // ~1.414
+    const T max_scaling = radix * min_scaling;  // ~2.828
+
+    bool converged = false;
+
+    for (size_t iter = 0; !converged && iter < max_iterations; ++iter) {
+      converged = true;  // Assume convergence unless scaling occurs
+
+      // Compute off-diagonal row and column norms
+      std::vector<T> row_norms(n, T(0));
+      std::vector<T> col_norms(n, T(0));
+      for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+          if (i != j) {
+            T val = std::abs(balanced(i, j));
+            row_norms[i] += val;
+            col_norms[j] += val;
+          }
+        }
+      }
+
+      // Determine scaling factors for each row
+      std::vector<T> scaling_factors(n, T(1));
+      for (size_t i = 0; i < n; ++i) {
+        T original_norm_sum = row_norms[i] + col_norms[i];
+        if (original_norm_sum < eps ||
+            (row_norms[i] < eps && col_norms[i] < eps))
+          continue;  // Skip if norms are negligible
+
+        T f = T(1);
+        T row_norm = row_norms[i];
+        T col_norm = col_norms[i];
+
+        // Adjust scaling to balance row and column norms
+        T target = col_norm / radix;
+        while (row_norm < target) {
+          f *= radix;
+          row_norm *= radix;
+          target /= radix;
+        }
+
+        target = col_norm * radix;
+        while (row_norm > target) {
+          f /= radix;
+          row_norm /= radix;
+          target *= radix;
+        }
+
+        // Check if scaling provides sufficient improvement
+        T scaled_norm = row_norm + col_norm / f;
+        if (scaled_norm < convergence_factor * original_norm_sum &&
+            (f >= min_scaling || f <= T(1) / min_scaling)) {
+          scaling_factors[i] = f;
+          converged = false;  // Need another iteration
+        }
+      }
+
+      // Apply scaling to the matrix
+      for (size_t i = 0; i < n; ++i) {
+        T f = scaling_factors[i];
+        if (f == T(1))
+          continue;
+
+        // Scale row i by f and column i by 1/f
+        for (size_t j = 0; j < n; ++j) {
+          balanced(i, j) *= f;
+          if (j != i)  // Avoid scaling diagonal twice
+            balanced(j, i) /= f;
+        }
+      }
+
+      // Early exit if no scaling was applied
+      if (converged)
+        break;
+    }
+    return balanced;
+  }
+
+  Matrix<T> balanced_form_two_phase(
+      T epsilon = std::numeric_limits<T>::epsilon()) const {
+    static_assert(std::is_floating_point_v<T>,
+                  "balanced_form requires floating-point types.");
+    if (!isSquare())
+      throw not_square();
+
+    const size_t n = nRows();
+    Matrix<T> balanced(*this);
+    const T radix = static_cast<T>(2);
+    const T eps = std::numeric_limits<T>::epsilon();
+
+    // Lambda to compute the current imbalance factor rho
+    auto compute_rho = [&]() {
+      std::vector<T> row_norms(n, T(0));
+      std::vector<T> col_norms(n, T(0));
+      for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+          if (i != j) {
+            T val = std::abs(balanced(i, j));
+            row_norms[i] += val;
+            col_norms[j] += val;
+          }
+        }
+      }
+      T rho = T(1);
+      for (size_t i = 0; i < n; ++i) {
+        if (row_norms[i] < eps && col_norms[i] < eps)
+          continue;
+        T ratio = row_norms[i] / col_norms[i];
+        T inv_ratio = col_norms[i] / row_norms[i];
+        if (ratio > rho)
+          rho = ratio;
+        if (inv_ratio > rho)
+          rho = inv_ratio;
+      }
+      return rho;
+    };
+
+    // Step 1: Compute initial imbalance rho
+    T rho = compute_rho();
+    if (rho <= epsilon)
+      return balanced;  // Already sufficiently balanced
+
+    // Compute number of iterations per phase
+    size_t T_phase = static_cast<size_t>(n * n * n * std::log(rho / epsilon) /
+                                         std::log(radix)) +
+                     1;
+
+    // Raising Phase
+    for (size_t iter = 0; iter < T_phase; ++iter) {
+      std::vector<T> row_norms(n, T(0));
+      std::vector<T> col_norms(n, T(0));
+      for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+          if (i != j) {
+            T val = std::abs(balanced(i, j));
+            row_norms[i] += val;
+            col_norms[j] += val;
+          }
+        }
+      }
+
+      size_t i_raise = n;
+      T min_ratio = std::numeric_limits<T>::max();
+      for (size_t i = 0; i < n; ++i) {
+        if (row_norms[i] < eps || col_norms[i] < eps)
+          continue;
+        T ratio = row_norms[i] / col_norms[i];
+        if (ratio < min_ratio) {
+          min_ratio = ratio;
+          i_raise = i;
+        }
+      }
+
+      if (i_raise < n) {
+        T f = radix;
+        for (size_t j = 0; j < n; ++j) {
+          balanced(i_raise, j) *= f;
+          if (j != i_raise)
+            balanced(j, i_raise) /= f;
+        }
+      }
+    }
+
+    // Lowering Phase
+    for (size_t iter = 0; iter < T_phase; ++iter) {
+      std::vector<T> row_norms(n, T(0));
+      std::vector<T> col_norms(n, T(0));
+      for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+          if (i != j) {
+            T val = std::abs(balanced(i, j));
+            row_norms[i] += val;
+            col_norms[j] += val;
+          }
+        }
+      }
+
+      size_t i_lower = n;
+      T max_ratio = T(0);
+      for (size_t i = 0; i < n; ++i) {
+        if (row_norms[i] < eps || col_norms[i] < eps)
+          continue;
+        T ratio = row_norms[i] / col_norms[i];
+        if (ratio > max_ratio) {
+          max_ratio = ratio;
+          i_lower = i;
+        }
+      }
+
+      if (i_lower < n) {
+        T f = T(1) / radix;
+        for (size_t j = 0; j < n; ++j) {
+          balanced(i_lower, j) *= f;
+          if (j != i_lower)
+            balanced(j, i_lower) /= f;
+        }
+      }
+    }
+
+    return balanced;
+  }
+
+  // QR Decomposition using Gram-Schmidt process
+  std::tuple<Matrix<T>, Matrix<T>> decompose_QR() const {
+    if (!isSquare()) {
+      throw not_square();
+    }
+    size_t n = nRows();
+    Matrix<T> Q(n, n);
+    Matrix<T> R(n, n);
+
+    for (size_t j = 0; j < n; ++j) {
+      // Start with the j-th column of the matrix
+      Matrix<T> v = this->getColumn(j);
+
+      // Subtract the projection onto previous orthogonal vectors
+      for (size_t i = 0; i < j; ++i) {
+        Matrix<T> qi = Q.getColumn(i);
+        T proj = (qi.transpose() * v)(0, 0);  // Dot product
+        R(i, j) = proj;
+        v = v - qi * proj;  // Subtract the projection
+      }
+
+      // Normalize the result to get the next orthogonal vector
+      T norm = std::sqrt((v.transpose() * v)(0, 0));
+      if (norm < 1e-10) {  // Handle zero vectors to avoid division by zero
+        Q.setColumn(Matrix<T>(n, 1, 0.0), j);
+      } else {
+        Matrix<T> qj = v / norm;
+        Q.setColumn(qj, j);
+      }
+      R(j, j) = norm;
+    }
+
+    return std::make_tuple(Q, R);
+  }
+
+  // QR Algorithm to compute eigenvalues
+  std::vector<T> eigenvalues(int max_iterations = 100) const {
+    if (!isSquare()) {
+      throw not_square();
+    }
+
+    Matrix<T> A = *this;  // Make a copy of the matrix
+
+    for (int iter = 0; iter < max_iterations; ++iter) {
+      auto [Q, R] = A.decompose_QR();
+      A = R * Q;  // Update A for the next iteration
+    }
+
+    // Extract eigenvalues from the diagonal of the converged matrix
+    std::vector<T> eig;
+    for (size_t i = 0; i < A.nRows(); ++i) {
+      eig.push_back(A(i, i));
+    }
+
+    return eig;
+  }
+
+  Matrix<T> HessenbergReduceGQvdGBlocked(size_t block_size) {}
+
+ private:
+  void HESSRED_GQVDG_UNB(Matrix<T>& subA, Matrix<T>& Up, Matrix<T>& Zp,
+                         Matrix<T>& Tp) {
+    size_t m = subA.nRows();
+    size_t nb = subA.nCols();
+
+    Up = Matrix<T>(m, nb);
+    Zp = Matrix<T>(m, nb);
+    Tp = Matrix<T>(nb, nb);
+
+    auto apply_previous_transforms = [](const Matrix<T>& a_j,
+                                        const Matrix<T>& U_panel,
+                                        const Matrix<T>& T_panel, size_t j) {
+      if (j == 0)
+        return a_j;
+      size_t m_panel = U_panel.nRows();
+      Matrix<T> U_prev = U_panel.slice(j, m_panel, Orientation::Row)
+                             .slice(0, j, Orientation::Column);
+      Matrix<T> T_prev = T_panel.slice(0, j, Orientation::Row)
+                             .slice(0, j, Orientation::Column);
+
+      Matrix<T> temp = U_prev.transpose() * a_j;
+      Matrix<T> y = T_prev.inverse() * temp;
+      return a_j - U_prev * y;
+    };
+
+    for (size_t j = 0; j < nb; ++j) {
+      Matrix<T> a_j = subA.slice(j, m, Orientation::Row).getColumn(j);
+
+      if (j > 0) {
+        a_j = apply_previous_transforms(a_j, Up, Tp, j);
+      }
+
+      auto [u_j, tau_j, a_j_updated] = Matrix<T>::Housev(a_j);
+
+      for (size_t i = 0; i < u_j.nRows(); ++i) {
+        Up(j + i, j) = u_j(i, 0);
+      }
+      Tp(j, j) = tau_j;
+
+      if (j < nb - 1) {
+        Matrix<T> sub_panel = subA.slice(j, m, Orientation::Row)
+                                  .slice(j + 1, nb, Orientation::Column);
+        Matrix<T> product = sub_panel * u_j;
+        for (size_t i = 0; i < product.nRows(); ++i) {
+          Zp(j + i, j) = product(i, 0);
+        }
+      }
+
+      if (j < nb - 1) {
+        for (size_t i = j + 1; i < nb; ++i) {
+          T sum = 0;
+          for (size_t k = 0; k < Up.nRows() - j; ++k) {
+            sum += Up(j + k, i) * u_j(k, 0);
+          }
+          Tp(j, i) = sum;
+        }
+      }
+
+      for (size_t i = 0; i < a_j_updated.nRows(); ++i) {
+        subA(j + i, j) = a_j_updated(i, 0);
+      }
+    }
+  }
   //------------------------------END CLASS MATRIX--------------------------------------//
 
 };  // class Matrix

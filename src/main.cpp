@@ -318,9 +318,24 @@ int main() {
       {Kr, Kg, Kb},
       {-Kr / (1.0f - Kb) * uScale, -Kg / (1.0f - Kb) * uScale, uScale},
       {vScale, -Kg / (1.0f - Kr) * vScale, -Kb / (1.0f - Kr) * vScale}};
-
+  printf("YUV matrix:\n");
   // Print the matrix to verify
   print_matrix(rgbToYUV);
+
+  Matrix<float> B{{1.1, 1000.2, 10.4}, {100.1, 2.2, 200.5}, {5.3, 50.4, 3.3}};
+  printf("Imbalancedmatrix B:\n");
+  print_matrix(B);
+  //B.compute_imbalance();
+  try {
+    printf("doing balanced form........\n");
+    auto balanced = B.balanced_form_two_phase(1.1);
+    printf("Balanced Matrix\n");
+    print_matrix(balanced);
+  } catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+
+  // Print balanced matrix and new norms
 
   // Define matrix A and vector b
   Matrix<double> A(3, 4, {1, 3, 0, 2, 0, 0, 1, 4, 1, 3, 1, 6});
